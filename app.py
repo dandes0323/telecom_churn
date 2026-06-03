@@ -192,7 +192,7 @@ elif selected == "🤖 Modelos ML":
         fi_sorted = sorted(fi.items(), key=lambda x: x[1], reverse=True)[:10]
         fi_df = pd.DataFrame(fi_sorted, columns=["Característica", "Importancia"])
         fig2, ax2 = plt.subplots(figsize=(10, 5))
-        ax2.barh(fi_df["Feature"], fi_df["Importance"], color="#4fc3f7")
+        ax2.barh(fi_df["Característica"], fi_df["Importancia"], color="#4fc3f7")
         ax2.set_title("Importancia de Características", color="white")
         ax2.set_xlabel("Importancia", color="white")
         ax2.tick_params(colors="white")
