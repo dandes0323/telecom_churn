@@ -177,6 +177,55 @@ elif selected == "🤖 Modelos ML":
         st.metric("Puntaje Silhouette", f"{ml_results['kmeans']['silhouette_score']:.4f}")
         st.info("KMeans agrupa clientes en 2 clusters: los que probablemente se quedan vs. los que se van.")
 
+        # ── Scatter plot de clusters ──────────────────────────
+        st.subheader("Gráfico de Dispersión — Clientes por Cluster")
+        scatter_df = df.copy()
+        scatter_df["TotalCharges"] = pd.to_numeric(scatter_df["TotalCharges"], errors="coerce")
+        scatter_df.dropna(subset=["TotalCharges"], inplace=True)
+        labels = ml_results["kmeans"]["labels"]
+        scatter_df = scatter_df.iloc[:len(labels)].copy()
+        scatter_df["Cluster"] = labels
+
+        colores_cluster = {0: "#4fc3f7", 1: "#ff4444"}
+        nombres_cluster = {0: "Cluster 0 — Perfil Estable", 1: "Cluster 1 — Perfil en Riesgo"}
+
+        fig_s, ax_s = plt.subplots(figsize=(10, 5))
+        for cl in [0, 1]:
+            subset = scatter_df[scatter_df["Cluster"] == cl]
+            ax_s.scatter(
+                subset["tenure"], subset["MonthlyCharges"],
+                c=colores_cluster[cl], label=nombres_cluster[cl],
+                alpha=0.45, s=18, edgecolors="none"
+            )
+        ax_s.set_xlabel("Antigüedad (meses)", color="white")
+        ax_s.set_ylabel("Cargo Mensual ($)", color="white")
+        ax_s.set_title("Dispersión de Clientes por Cluster", color="white")
+        ax_s.tick_params(colors="white")
+        ax_s.set_facecolor("#1a1a2e")
+        ax_s.legend(facecolor="#1a1a2e", labelcolor="white", fontsize=9)
+        fig_s.patch.set_facecolor("#0e1117")
+        st.pyplot(fig_s)
+        st.caption("Cluster 0 (azul) = mayor antigüedad y cargos bajos → menor riesgo.  Cluster 1 (rojo) = contratos cortos y cargos altos → mayor riesgo.")
+
+        # ── Agrupaciones: conteo por cluster ─────────────────
+        st.subheader("Agrupación de Clientes por Cluster")
+        conteo = scatter_df["Cluster"].value_counts().reset_index()
+        conteo.columns = ["Cluster", "Cantidad de Clientes"]
+        conteo["Perfil"] = conteo["Cluster"].map({0: "Perfil Estable", 1: "Perfil en Riesgo"})
+        st.dataframe(conteo, use_container_width=True)
+
+        fig_b, ax_b = plt.subplots(figsize=(6, 3))
+        ax_b.bar(conteo["Perfil"], conteo["Cantidad de Clientes"], color=["#4fc3f7", "#ff4444"])
+        ax_b.set_title("Clientes por Cluster", color="white")
+        ax_b.set_ylabel("Cantidad", color="white")
+        ax_b.tick_params(colors="white")
+        ax_b.set_facecolor("#1a1a2e")
+        fig_b.patch.set_facecolor("#0e1117")
+        for bar, val in zip(ax_b.patches, conteo["Cantidad de Clientes"]):
+            ax_b.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 20,
+                      str(val), ha="center", color="white", fontweight="bold")
+        st.pyplot(fig_b)
+
     with tab3:
         st.subheader("Random Forest")
         st.metric("Precisión", f"{ml_results['rf']['accuracy']:.4f}")
@@ -281,6 +330,10 @@ elif selected == "🧠 Red Neuronal DL":
 elif selected == "🔮 Predicción":
     st.markdown('<div class="main-header">🔮 Predicción de Churn</div>', unsafe_allow_html=True)
 
+    # ── Inicializar historial en session_state ────────────────────
+    if "historial" not in st.session_state:
+        st.session_state["historial"] = []
+
     _, dl_results = train_models_cached(df)
     model = dl_results["model"]
     scaler = dl_results["scaler"]
@@ -298,6 +351,7 @@ elif selected == "🔮 Predicción":
     }
 
     with st.form("prediction_form"):
+        nombre_cliente = st.text_input("Nombre del cliente (opcional)", placeholder="Ej: Juan Pérez García")
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -358,6 +412,20 @@ elif selected == "🔮 Predicción":
 
         st.markdown(f"**Probabilidad de Churn:** {prob:.2%}")
 
+        # ── Guardar en historial ──────────────────────────────
+        import datetime
+        registro = {
+            "Nombre": nombre_cliente if nombre_cliente.strip() else "Cliente sin nombre",
+            "Contrato": contract,
+            "Internet": internet_service,
+            "Cargo Mensual": f"${monthly_charges}",
+            "Antigüedad": f"{tenure} meses",
+            "Probabilidad": f"{prob:.2%}",
+            "Resultado": "🔴 EN RIESGO" if prob >= 0.5 else "🟢 ESTABLE",
+            "Hora": datetime.datetime.now().strftime("%H:%M:%S"),
+        }
+        st.session_state["historial"].append(registro)
+
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.barh([0], [gauge_val], color="#ff4444" if prob >= 0.5 else "#00C853",
                 height=0.5)
@@ -370,6 +438,23 @@ elif selected == "🔮 Predicción":
         fig.patch.set_facecolor("#0e1117")
         ax.tick_params(colors="white")
         st.pyplot(fig)
+
+    # ── Historial de predicciones ────────────────────────────────
+    if st.session_state["historial"]:
+        st.markdown("---")
+        st.markdown("### 📋 Historial de Evaluaciones")
+        hist_df = pd.DataFrame(st.session_state["historial"])
+        st.dataframe(hist_df, use_container_width=True)
+        if st.button("🗑️ Limpiar historial"):
+            st.session_state["historial"] = []
+            st.rerun()
+        csv_hist = hist_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Descargar historial CSV",
+            data=csv_hist,
+            file_name="historial_predicciones.csv",
+            mime="text/csv"
+        )
 
 elif selected == "📈 Resultados":
     st.markdown('<div class="main-header">📈 Comparación de Modelos</div>', unsafe_allow_html=True)
