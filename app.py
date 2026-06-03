@@ -772,6 +772,166 @@ elif selected == "🔮  Predicción":
         </div>
         """, unsafe_allow_html=True)
 
+
+        # ── Sugerencias personalizadas inteligentes ─────────────
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+        # Datos del cliente para personalizar
+        tiene_fibra     = internet_service == "Fibra óptica"
+        tiene_dsl       = internet_service == "DSL"
+        sin_internet    = internet_service == "Sin internet"
+        contrato_mes    = contract == "Mes a mes"
+        contrato_anual  = contract == "Un año"
+        contrato_2anios = contract == "Dos años"
+        cheque_elec     = payment_method == "Cheque electrónico"
+        cargo_alto      = monthly_charges >= 80
+        cargo_medio     = 40 <= monthly_charges < 80
+        es_nuevo        = tenure <= 6
+        es_veterano     = tenure >= 36
+        tiene_familia   = partner == "Sí (tiene)" or dependents == "Sí (tiene)"
+
+        # Construir sugerencias dinámicas
+        def card(icon, titulo, desc, color):
+            return f"""<div style="background:rgba({color},0.07);border-radius:10px;padding:14px 16px;border:1px solid rgba({color},0.18)">
+              <div style="font-size:12px;font-weight:700;color:rgb({color});margin-bottom:6px">{icon} {titulo}</div>
+              <div style="font-size:12px;color:#8BAAC8;line-height:1.6">{desc}</div>
+            </div>"""
+
+        if prob >= 0.75:
+            # CRÍTICO
+            ofertas = []
+            ofertas.append(card("🚨","Descuento de emergencia",
+                f"Ofrecer <strong style='color:#fff'>30% de descuento</strong> inmediato en el cargo mensual (${monthly_charges} → ${monthly_charges*0.7:.0f}).<br>Válido si firma contrato <strong style='color:#fff'>bianual hoy mismo</strong>.","239,68,68"))
+            if contrato_mes:
+                ofertas.append(card("📋","Cambio de contrato urgente",
+                    f"Migrar de <strong style='color:#fff'>mes a mes</strong> a contrato anual con <strong style='color:#fff'>2 meses gratis</strong>.<br>Reducción inmediata del riesgo de abandono.","239,68,68"))
+            if tiene_fibra and cargo_alto:
+                ofertas.append(card("💡","Revisión de plan",
+                    f"Cargo actual <strong style='color:#fff'>${monthly_charges}/mes</strong> es elevado para fibra.<br>Ofrecer plan <strong style='color:#fff'>fibra optimizada</strong> a ${monthly_charges*0.75:.0f}/mes con misma velocidad.","239,68,68"))
+            if cheque_elec:
+                ofertas.append(card("💳","Cambio de pago",
+                    "El <strong style='color:#fff'>cheque electrónico</strong> está asociado a mayor tasa de churn.<br>Ofrecer <strong style='color:#fff'>descuento adicional 5%</strong> al migrar a débito automático.","239,68,68"))
+            ofertas.append(card("📞","Llamada prioritaria 24h",
+                f"Cliente <strong style='color:#fff'>{nombre_show}</strong> requiere contacto inmediato.<br>Probabilidad de abandono: <strong style='color:#F87171'>{prob:.1%}</strong> — intervención urgente.","239,68,68"))
+
+            grid = "".join(ofertas)
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(239,68,68,0.09),rgba(220,38,38,0.04));
+                border:1px solid rgba(239,68,68,0.3);border-radius:14px;padding:22px 26px;margin-top:8px">
+              <div style="font-size:13px;font-weight:700;color:#F87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">
+                🚨 RIESGO CRÍTICO — Intervención inmediata ({prob:.1%})
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">{grid}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif prob >= 0.50:
+            # ALTO
+            ofertas = []
+            ofertas.append(card("💰","Oferta de retención",
+                f"Descuento del <strong style='color:#fff'>20%</strong> por 3 meses si renueva contrato.<br>Cargo: ${monthly_charges} → <strong style='color:#fff'>${monthly_charges*0.8:.0f}/mes</strong> durante 90 días.","239,68,68"))
+            if contrato_mes:
+                ofertas.append(card("📋","Upgrade de contrato",
+                    "Migrar a <strong style='color:#fff'>contrato anual</strong> con precio congelado por 12 meses.<br>Ahorro estimado: <strong style='color:#fff'>${monthly_charges*0.15*12:.0f}/año</strong>.","239,68,68"))
+            if sin_internet:
+                ofertas.append(card("📶","Agregar internet",
+                    "Cliente sin servicio de internet — alta oportunidad.<br>Ofrecer <strong style='color:#fff'>DSL básico gratis por 2 meses</strong> para fidelizar.","239,68,68"))
+            if not tiene_familia:
+                ofertas.append(card("👨‍👩‍👧","Plan familiar",
+                    "Sin pareja ni dependientes registrados.<br>Proponer <strong style='color:#fff'>plan familiar</strong> con descuento al agregar una línea.","239,68,68"))
+            ofertas.append(card("🎁","Servicio adicional gratis",
+                "Agregar <strong style='color:#fff'>soporte técnico premium</strong> sin costo por 3 meses.<br>Aumenta percepción de valor y reduce intención de abandono.","239,68,68"))
+
+            grid = "".join(ofertas)
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(220,38,38,0.04));
+                border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:22px 26px;margin-top:8px">
+              <div style="font-size:13px;font-weight:700;color:#F87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">
+                🔴 RIESGO ALTO — Acciones de retención ({prob:.1%})
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">{grid}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif prob >= 0.25:
+            # MODERADO
+            ofertas = []
+            ofertas.append(card("🎯","Oferta preventiva",
+                f"Descuento del <strong style='color:#fff'>10%</strong> al renovar por un año.<br>Cargo: ${monthly_charges} → <strong style='color:#fff'>${monthly_charges*0.9:.0f}/mes</strong> durante 12 meses.","251,191,36"))
+            if contrato_mes or contrato_anual:
+                ofertas.append(card("🔒","Fidelización por contrato",
+                    f"Migrar de <strong style='color:#fff'>{contract.lower()}</strong> a contrato <strong style='color:#fff'>bianual</strong>.<br>Precio garantizado + 1 servicio adicional gratis.","251,191,36"))
+            if tiene_dsl:
+                ofertas.append(card("🚀","Upgrade a fibra óptica",
+                    "Cliente con DSL — proponer migración a <strong style='color:#fff'>fibra óptica</strong>.<br>Mayor velocidad al mismo precio o con pequeño incremento.","251,191,36"))
+            if cargo_medio:
+                ofertas.append(card("📦","Paquete combo",
+                    f"Cargo actual: <strong style='color:#fff'>${monthly_charges}/mes</strong>.<br>Ofrecer <strong style='color:#fff'>combo teléfono + internet + TV</strong> por precio similar.","251,191,36"))
+
+            grid = "".join(ofertas)
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(245,158,11,0.04));
+                border:1px solid rgba(251,191,36,0.25);border-radius:14px;padding:22px 26px;margin-top:8px">
+              <div style="font-size:13px;font-weight:700;color:#FBBF24;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">
+                ⚠️ RIESGO MODERADO — Prevención activa ({prob:.1%})
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">{grid}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif prob >= 0.10:
+            # BAJO — upsell suave
+            ofertas = []
+            if sin_internet:
+                ofertas.append(card("📶","Agregar internet",
+                    "Gran oportunidad: cliente sin internet.<br>Ofrecer <strong style='color:#fff'>DSL o fibra óptica</strong> con 1 mes gratis de prueba.","34,197,94"))
+            elif tiene_dsl:
+                ofertas.append(card("⚡","Upgrade a fibra",
+                    "Proponer migración de DSL a <strong style='color:#fff'>fibra óptica</strong>.<br>Mayor velocidad, misma fidelidad, mayor ingreso.","34,197,94"))
+            ofertas.append(card("📱","Segunda línea",
+                f"Cliente estable con {tenure} meses de permanencia.<br>Ofrecer <strong style='color:#fff'>línea adicional con 25% de descuento</strong> por lealtad.","34,197,94"))
+            if es_veterano:
+                ofertas.append(card("🏆","Premio por lealtad",
+                    f"Con <strong style='color:#fff'>{tenure} meses</strong> es un cliente valioso.<br>Invitar al <strong style='color:#fff'>programa VIP</strong> con beneficios exclusivos.","34,197,94"))
+            if not tiene_familia:
+                ofertas.append(card("👨‍👩‍👧","Plan familiar",
+                    "Proponer <strong style='color:#fff'>plan familiar</strong> con descuento al agregar dependientes.<br>Aumenta ingresos y refuerza el vínculo con la empresa.","34,197,94"))
+
+            grid = "".join(ofertas)
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(22,163,74,0.04));
+                border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:22px 26px;margin-top:8px">
+              <div style="font-size:13px;font-weight:700;color:#86EFAC;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">
+                🟡 RIESGO BAJO — Oportunidad de crecimiento ({prob:.1%})
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">{grid}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        else:
+            # FIEL < 10%
+            ofertas = []
+            ofertas.append(card("🏆","Programa VIP",
+                f"<strong style='color:#fff'>{nombre_show}</strong> es un cliente fiel con {tenure} meses.<br>Acceso exclusivo al <strong style='color:#fff'>programa de lealtad premium</strong>.","34,197,94"))
+            ofertas.append(card("📱","Segunda línea premium",
+                f"Ofrecer <strong style='color:#fff'>segunda línea con 30% de descuento</strong> permanente.<br>Beneficio por ser cliente destacado.","34,197,94"))
+            if tiene_dsl or sin_internet:
+                ofertas.append(card("🚀","Fibra óptica exclusiva",
+                    "Upgrade a <strong style='color:#fff'>fibra óptica con instalación gratuita</strong>.<br>Velocidad premium como reconocimiento a su lealtad.","34,197,94"))
+            ofertas.append(card("🎁","Beneficio sorpresa",
+                f"Cargo actual: <strong style='color:#fff'>${monthly_charges}/mes</strong>.<br>Agregar <strong style='color:#fff'>servicio de TV streaming gratis</strong> por 3 meses.","34,197,94"))
+
+            grid = "".join(ofertas)
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(6,182,212,0.08),rgba(14,165,233,0.04));
+                border:1px solid rgba(6,182,212,0.3);border-radius:14px;padding:22px 26px;margin-top:8px">
+              <div style="font-size:13px;font-weight:700;color:#67E8F9;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">
+                💎 CLIENTE FIEL — Máxima fidelización ({prob:.1%})
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">{grid}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
         registro = {
             "Nombre": nombre_show, "Contrato": contract, "Internet": internet_service,
             "Cargo": f"${monthly_charges}", "Antigüedad": f"{tenure}m",
