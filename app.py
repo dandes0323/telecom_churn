@@ -390,12 +390,23 @@ elif selected == "🔮 Predicción":
             "Churn": "No"
         }
 
+        # Construir vector numérico directamente desde raw_input
+        # sin pasar por get_dummies (que con 1 fila no genera todas las columnas)
         input_df = pd.DataFrame([raw_input])
-        X_input, _, _, input_cols = preprocess_data(input_df)
+        input_df["TotalCharges"] = pd.to_numeric(input_df["TotalCharges"], errors="coerce")
+        input_df["Churn_binary"] = 0
 
-        # Alinear columnas del input con las columnas del entrenamiento
-        input_encoded = pd.DataFrame(X_input, columns=input_cols)
-        input_aligned = input_encoded.reindex(columns=feature_cols, fill_value=0)
+        # Concatenar con el df de entrenamiento para que get_dummies genere TODAS las columnas
+        df_train_sample = df.copy().head(10)
+        df_train_sample["Churn_binary"] = df_train_sample["Churn"].map({"Yes": 1, "No": 0})
+        input_df_full = pd.concat([df_train_sample, input_df], ignore_index=True)
+
+        cat_cols_full = input_df_full.select_dtypes(include=["object"]).columns.tolist()
+        cat_cols_full = [c for c in cat_cols_full if c not in ["customerID", "Churn", "Churn_binary"]]
+        encoded_full = pd.get_dummies(input_df_full, columns=cat_cols_full, drop_first=False)
+
+        # Tomar solo la última fila (el cliente a predecir)
+        input_aligned = encoded_full.tail(1).reindex(columns=feature_cols, fill_value=0)
         X_input_aligned = input_aligned.values.astype(np.float32)
 
         X_input_scaled = scaler.transform(X_input_aligned)
